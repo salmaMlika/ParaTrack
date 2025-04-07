@@ -1,5 +1,9 @@
 import requests
 from bs4 import BeautifulSoup
+import csv
+
+
+
 #make request
 url="https://www.parashop.tn/visage"
 response=requests.get(url)
@@ -43,8 +47,22 @@ for product in soup.find_all('div',class_='product-thumb'):
     
     else:
         image_url = "No Image Found"
+    products.append({
+        "title": title,
+        "link": link,
+        "price": price,
+        "old_price": old_price,
+        "stock": stock,
+        "image_url": image_url
+    })
 
-    print(image_url)
- 
-    
+with open('products.csv', mode='w', newline='', encoding='utf-8') as file:
+    fieldnames =['title', 'link', 'price', 'old_price', 'stock', 'image_url']
+    writer = csv.DictWriter(file, fieldnames=fieldnames)
+    writer.writeheader()
+    for product in products:
+        writer.writerow(product)
+
+print("jawek behi")
+
     
