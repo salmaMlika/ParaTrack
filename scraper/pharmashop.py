@@ -1,8 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import csv
-import os
-
+import pandas as pd
 
 #make request
 url="https://pharma-shop.tn/839-visage"
@@ -11,8 +10,8 @@ response=requests.get(url)
 soup=BeautifulSoup(response.text,'html.parser')
 
 products =[]
-
-for product in soup.find_all('article',class_='product-miniature js-product-miniature'):
+while True:
+ for product in soup.find_all('article',class_='product-miniature js-product-miniature'):
     #stock
     stock="available"
     product_out_of_stock= product.find('li',class_='product-flag out_of_stock')
@@ -55,11 +54,14 @@ for product in soup.find_all('article',class_='product-miniature js-product-mini
         "image_url": image_url,
         "source":"pharmashop"
     })
-file_path="data/pharmashop_products.csv"
-with open(file_path, mode='w', newline='', encoding='utf-8') as file:
+ file_path="data/pharmashop_products.csv"
+ with open(file_path, mode='w', newline='', encoding='utf-8') as file:
     writer = csv.DictWriter(file, fieldnames=['title', 'link', 'price', 'old_price', 'stock', 'image_url','source'])
     writer.writeheader()
     for produit in products:
         writer.writerow(produit)
-
-print("jawek behi")
+ next_button = soup.find('a', class_='next js-search-link')
+ if next_button and 'href' in next_button.attrs:
+        url = f"{next_button['href']}"
+ else:
+        url = None

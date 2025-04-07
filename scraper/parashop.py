@@ -12,8 +12,8 @@ response=requests.get(url)
 soup=BeautifulSoup(response.text,'html.parser')
 
 products =[]
-
-for product in soup.find_all('div',class_='product-thumb'):
+while True:
+ for product in soup.find_all('div',class_='product-thumb'):
     #stock
     stock="available"
     product_label= product.find('div',class_='product-labels')
@@ -59,13 +59,18 @@ for product in soup.find_all('div',class_='product-thumb'):
 
     })
 
-file_path="data/parashop_products.csv"
-with open(file_path, mode='w', newline='', encoding='utf-8') as file:
+ file_path="data/parashop_products.csv"
+ with open(file_path, mode='w', newline='', encoding='utf-8') as file:
     writer = csv.DictWriter(file, fieldnames=['title', 'link', 'price', 'old_price', 'stock', 'image_url','source'])
     writer.writeheader()
     for produit in products:
         writer.writerow(produit)
+ next_button = soup.find('a', class_='next js-search-link')
+ if next_button and 'href' in next_button.attrs:
+        url = f"{next_button['href']}"
+ else:
+        url = None
+ print("jawek behi")
 
-print("jawek behi")
 
     
