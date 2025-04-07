@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import csv
+import os
 
 
 
@@ -53,15 +54,17 @@ for product in soup.find_all('div',class_='product-thumb'):
         "price": price,
         "old_price": old_price,
         "stock": stock,
-        "image_url": image_url
+        "image_url": image_url,
+        "source":"parashop"
+
     })
 
-with open('products.csv', mode='w', newline='', encoding='utf-8') as file:
-    fieldnames =['title', 'link', 'price', 'old_price', 'stock', 'image_url']
-    writer = csv.DictWriter(file, fieldnames=fieldnames)
+file_path="data/parashop_products.csv"
+with open(file_path, mode='w', newline='', encoding='utf-8') as file:
+    writer = csv.DictWriter(file, fieldnames=['title', 'link', 'price', 'old_price', 'stock', 'image_url','source'])
     writer.writeheader()
-    for product in products:
-        writer.writerow(product)
+    for produit in products:
+        writer.writerow(produit)
 
 print("jawek behi")
 
