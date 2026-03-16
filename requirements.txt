@@ -1,6 +1,6 @@
 beautifulsoup4
 requests
 pandas
-fuzzywuzzy-0.18.0
+scikit-learn
+numpy
 streamlit
-matplotlib
