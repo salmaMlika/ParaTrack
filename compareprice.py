@@ -5,6 +5,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from scraper.parafendri import scrape_parafendri
 from scraper.pharmashop import scrape_pharmashop
+from database import init_db, save_product
 
 SIMILARITY_THRESHOLD = 0.40
 
@@ -19,6 +20,7 @@ def preprocess(text):
 
 
 def compare_prices(product_name):
+    init_db()  # ensure tables exist before saving
     parafendri_products = scrape_parafendri(product_name)
     pharmashop_products = scrape_pharmashop(product_name)
 
@@ -42,6 +44,27 @@ def compare_prices(product_name):
 
         if best_score >= SIMILARITY_THRESHOLD:
             best_match = pharmashop_products[best_idx]
+
+            # Auto-save both products to DB — cron job will track them from now on
+            save_product(
+                title=product_a['title'],
+                source=product_a['source'],
+                link=product_a['link'],
+                image_url=product_a.get('image_url', ''),
+                price=product_a['price'],
+                old_price=product_a.get('old_price', ''),
+                stock=product_a.get('stock', 'available')
+            )
+            save_product(
+                title=best_match['title'],
+                source=best_match['source'],
+                link=best_match['link'],
+                image_url=best_match.get('image_url', ''),
+                price=best_match['price'],
+                old_price=best_match.get('old_price', ''),
+                stock=best_match.get('stock', 'available')
+            )
+
             matches.append({
                 'titleA': product_a['title'],
                 'price_siteA': product_a['price'],
