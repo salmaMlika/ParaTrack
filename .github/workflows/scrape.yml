@@ -1,0 +1,33 @@
+name: Scrape and Store Prices
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # every 6 hours
+  workflow_dispatch:          # allow manual trigger from GitHub UI
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scraper
+        run: python scrape_and_store.py
+
+      - name: Commit updated database
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add prices.db
+          git diff --cached --quiet || git commit -m "chore: update prices [skip ci]"
+          git push
