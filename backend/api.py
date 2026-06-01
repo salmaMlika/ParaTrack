@@ -1,4 +1,3 @@
-# backend/api.py
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "prophet_model"))
 
@@ -10,11 +9,11 @@ from database import (
 )
 from compareprice import compare_prices
 from rag_chatbot import chat_with_rag, reindex_products
-from skin_analyzer import SkinAnalyzer
 from recommendations import get_recommendations
 from model import run_prediction
 from dotenv import load_dotenv
-import sqlite3, tempfile
+import requests as http_requests
+import tempfile
 
 load_dotenv()
 init_db()
@@ -22,12 +21,26 @@ init_db()
 app = Flask(__name__)
 CORS(app, origins="*")
 
+# URL du HuggingFace Space pour le skin analyzer
+SKIN_ANALYZER_URL = os.getenv("SKIN_ANALYZER_URL", "")
+
+# Skin analyzer local (fallback si pas de HF Space configuré)
 _skin_analyzer = None
 def get_skin_analyzer():
     global _skin_analyzer
     if _skin_analyzer is None:
+        from skin_analyzer import SkinAnalyzer
         _skin_analyzer = SkinAnalyzer("skin_issues_best.pth")
     return _skin_analyzer
+
+
+# ──────────────────────────────────────────────────────────────
+# Health check — requis par Render
+# ──────────────────────────────────────────────────────────────
+
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok"})
 
 
 # ──────────────────────────────────────────────────────────────
@@ -80,7 +93,7 @@ def recommendations():
 
 
 # ──────────────────────────────────────────────────────────────
-# Prédiction de prix (Prophet)
+# Prédiction Prophet
 # ──────────────────────────────────────────────────────────────
 
 @app.route("/products/predict", methods=["GET"])
@@ -89,7 +102,7 @@ def predict_price():
     source = request.args.get("source", "")
     days   = int(request.args.get("days", 7))
     if not title or not source:
-        return jsonify({"error": "Paramètres title et source requis"}), 400
+        return jsonify({"error": "title et source requis"}), 400
 
     from database import get_connection
     conn = get_connection()
@@ -99,16 +112,11 @@ def predict_price():
         conn.close()
 
     if df is None:
-        return jsonify({
-            "decision": decision,
-            "current_price": None,
-            "predicted_price": None,
-            "forecast": []
-        })
+        return jsonify({"decision": decision, "current_price": None,
+                        "predicted_price": None, "forecast": []})
 
     current_price   = round(float(df["y"].iloc[-1]), 3)
     predicted_price = round(float(forecast["yhat"].iloc[-1]), 3)
-
     forecast_series = forecast[["ds", "yhat", "yhat_lower", "yhat_upper"]].tail(days).copy()
     forecast_series["ds"] = forecast_series["ds"].dt.strftime("%Y-%m-%d")
 
@@ -121,23 +129,17 @@ def predict_price():
 
 
 # ──────────────────────────────────────────────────────────────
-# Alertes prix
+# Alertes
 # ──────────────────────────────────────────────────────────────
 
 @app.route("/api/alerts/subscribe", methods=["POST"])
 def subscribe():
-    """
-    S'abonner à une alerte de baisse de prix.
-    Body JSON : { email, product_id, threshold (optional, default 5.0) }
-    """
     data       = request.get_json()
     email      = data.get("email", "").strip()
     product_id = data.get("product_id")
     threshold  = float(data.get("threshold", 5.0))
-
     if not email or not product_id:
         return jsonify({"error": "email et product_id requis"}), 400
-
     try:
         subscribe_alert(email, int(product_id), threshold)
         return jsonify({"status": "ok", "message": f"Alerte créée pour {email}"})
@@ -165,7 +167,6 @@ def reset_chat():
 
 @app.route("/api/rag/reindex", methods=["POST"])
 def reindex():
-    """Endpoint pour déclencher manuellement la réindexation RAG"""
     try:
         reindex_products()
         return jsonify({"status": "ok"})
@@ -174,22 +175,35 @@ def reindex():
 
 
 # ──────────────────────────────────────────────────────────────
-# Skin analyzer
+# Skin analyzer — proxy vers HF Space ou local
 # ──────────────────────────────────────────────────────────────
 
 @app.route("/api/skin/analyze", methods=["POST"])
 def analyze_skin():
     if "image" not in request.files:
         return jsonify({"error": "Aucune image reçue"}), 400
+
     file = request.files["image"]
     if file.filename == "":
         return jsonify({"error": "Fichier vide"}), 400
 
+    # Si HF Space configuré → on proxy la requête
+    if SKIN_ANALYZER_URL:
+        try:
+            resp = http_requests.post(
+                f"{SKIN_ANALYZER_URL}/analyze",
+                files={"image": (file.filename, file.read(), file.content_type)},
+                timeout=30,
+            )
+            return jsonify(resp.json())
+        except Exception as e:
+            return jsonify({"error": f"HF Space indisponible: {str(e)}"}), 500
+
+    # Fallback local
     suffix = os.path.splitext(file.filename)[1] or ".jpg"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         file.save(tmp.name)
         tmp_path = tmp.name
-
     try:
         result = get_skin_analyzer().predict(tmp_path)
         return jsonify(result)
