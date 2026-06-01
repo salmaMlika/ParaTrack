@@ -1,0 +1,29 @@
+# Web
+flask
+flask-cors
+python-dotenv
+gunicorn
+
+# Scraping
+requests
+beautifulsoup4
+rapidfuzz
+
+# Database
+psycopg2-binary
+
+# ML / Data
+scikit-learn
+numpy
+pandas
+prophet
+
+# RAG
+chromadb
+sentence-transformers
+
+# LLM
+groq
+
+# Alertes
+resend

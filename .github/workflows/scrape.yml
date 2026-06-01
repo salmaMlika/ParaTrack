@@ -1,0 +1,53 @@
+name: Scrape, Alert & Reindex
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # toutes les 6h
+  workflow_dispatch:          # trigger manuel depuis GitHub UI
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL:     ${{ secrets.DATABASE_URL }}
+      GROQ_API_KEY:     ${{ secrets.GROQ_API_KEY }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      FROM_EMAIL:       ${{ secrets.FROM_EMAIL }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Scrape & store prices
+        run: |
+          cd backend
+          python scrape_and_store.py
+
+      - name: Run price alerts (Isolation Forest)
+        run: |
+          cd backend
+          python alerts.py
+
+      - name: Reindex RAG (ChromaDB)
+        run: |
+          cd backend
+          python reindex_rag.py
+
+      - name: Persist ChromaDB to repo
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add backend/chroma_db
+          git diff --cached --quiet || git commit -m "chore: reindex RAG [skip ci]"
+          git push
