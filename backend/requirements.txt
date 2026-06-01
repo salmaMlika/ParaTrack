@@ -1,29 +1,40 @@
-# Web
-flask
-flask-cors
-python-dotenv
+# Web Framework (FastAPI uniquement)
+fastapi
+uvicorn
 gunicorn
+
+# Traitement d'images
+torch
+torchvision
+Pillow
+
+# Hugging Face (pour charger le modèle)
+huggingface_hub
 
 # Scraping
 requests
 beautifulsoup4
 rapidfuzz
 
-# Database
+# Base de données PostgreSQL
 psycopg2-binary
 
-# ML / Data
+# ML / Data Science
 scikit-learn
 numpy
 pandas
 prophet
 
-# RAG
+# RAG (Retrieval Augmented Generation)
 chromadb
 sentence-transformers
 
-# LLM
+# LLM Groq
 groq
 
-# Alertes
+# Envoi d'emails / alertes
 resend
+
+# Utilitaires
+python-dotenv
+python-multipart
