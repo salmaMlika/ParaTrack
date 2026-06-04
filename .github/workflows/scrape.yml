@@ -1,9 +1,7 @@
 name: Scrape, Alert & Reindex
 
 on:
-  schedule:
-    - cron: '0 */6 * * *'   # toutes les 6h
-  workflow_dispatch:          # trigger manuel depuis GitHub UI
+  workflow_dispatch:  
 
 jobs:
   scrape:
