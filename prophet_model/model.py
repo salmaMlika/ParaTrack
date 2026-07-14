@@ -72,14 +72,15 @@ def predict(model, days=7):
 # ──────────────────────────────────────────────────────────────
 
 def get_decision(df, forecast):
-    current_price   = df["y"].iloc[-1]
+    current_price = df["y"].iloc[-1]
     predicted_price = forecast["yhat"].iloc[-1]
-    delta_pct       = ((predicted_price - current_price) / current_price) * 100
-
-    if delta_pct < -2:
-        return f"🟢 Bon moment pour acheter — prix prévu en baisse de {abs(delta_pct):.1f}%"
-    elif delta_pct > 2:
-        return f"🔴 Attendre — prix prévu en hausse de {delta_pct:.1f}%"
+    
+    delta_pct = ((predicted_price - current_price) / current_price) * 100
+    
+    if delta_pct < -2:  # Prix prédit plus bas → baisse à venir
+        return f"🔴 Attendre encore — prix prévu en baisse de {abs(delta_pct):.1f}%"
+    elif delta_pct > 2:  # Prix prédit plus haut → hausse à venir
+        return f"🟢 Acheter maintenant — prix prévu en hausse de {delta_pct:.1f}%"
     else:
         return "🟡 Prix stable — achetez quand vous voulez"
 
